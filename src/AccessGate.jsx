@@ -70,10 +70,24 @@ export default function AccessGate({ onRefresh }) {
   style={button}
   onClick={async () => {
     try {
-      const response = await fetch(
-        "/api/create-checkout-session",
-        { method: "POST" }
-      );
+      
+const { data: authData, error: authError } =
+await supabase.auth.getSession();
+
+if (authError || !authData.session) {
+throw new Error("Please sign in again");
+}
+
+const response = await fetch(
+"/api/create-checkout-session",
+{
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${authData.session.access_token}`
+  }
+}
+);
+
 
       const data = await response.json();         
 

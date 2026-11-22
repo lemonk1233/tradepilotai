@@ -1,5 +1,6 @@
 
 import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -10,6 +11,9 @@ export default async function handler(req, res) {
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const priceId = process.env.STRIPE_PRICE_ID;
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseKey =
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
   if (!secretKey?.startsWith("sk_test_") || !priceId) {
     return res.status(503).json({
@@ -17,9 +21,39 @@ export default async function handler(req, res) {
     });
   }
 
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(503).json({
+      error: "Supabase configuration required"
+    });
+  }
+
+  // Verify the signed-in user on the server.
+  const authorization = req.headers.authorization || "";
+  const token = authorization.startsWith("Bearer ")
+    ? authorization.slice(7)
+    : null;
+
+  if (!token) {
+    return res.status(401).json({
+      error: "Please sign in again"
+    });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const { data: authData, error: authError } =
+    await supabase.auth.getUser(token);
+
+  if (authError || !authData.user) {
+    return res.status(401).json({
+      error: "Invalid or expired login"
+    });
+  }
+
+  const user = authData.user;
+
   try {
     const stripe = new Stripe(secretKey);
-
     const price = await stripe.prices.retrieve(priceId);
 
     if (
@@ -40,6 +74,11 @@ export default async function handler(req, res) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+      client_reference_id: user.id,
+      metadata: {
+        supabase_user_id: user.id,
+        payment_environment: "test"
+      },
       line_items: [
         {
           price: priceId,
@@ -55,7 +94,7 @@ export default async function handler(req, res) {
       url: session.url
     });
   } catch (error) {
-    console.error("Stripe sandbox checkout error:", error.message);
+    console.error("Stripe checkout error:", error.message);
 
     return res.status(500).json({
       error: "Unable to create test checkout"
