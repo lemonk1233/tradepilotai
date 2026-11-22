@@ -75,7 +75,7 @@ export default function AccessGate({ onRefresh }) {
         { method: "POST" }
       );
 
-      const data = await response.json();
+      const data = await response.json();         
 
       if (!response.ok) {
         throw new Error(data.error);
