@@ -1450,6 +1450,53 @@ async function searchPortfolioTokens() {
                 </h2>
 
                 <TokenChart pair={pair} />
+                <a
+  href={`https://dexscreener.com/solana/${pair.pairAddress}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  style={{
+    ...buttonStyle,
+    display: "block",
+    textAlign: "center",
+    textDecoration: "none",
+    marginBottom: 12
+  }}
+>
+  VIEW TOKEN RESEARCH ↗
+</a>
+<button
+  onClick={async () => {
+    try {
+      await navigator.clipboard.writeText(
+        pair.baseToken.address
+      );
+      alert("Token address copied!");
+    } catch {
+      alert("Unable to copy token address.");
+    }
+  }}
+  style={{
+    ...buttonStyle,
+    width: "100%",
+    marginBottom: 12
+  }}
+>
+  COPY TOKEN ADDRESS
+</button>
+<button
+  onClick={() => {
+    setPortfolioQuery(pair.baseToken.address);
+    setActivePage("portfolio");
+    window.scrollTo(0, 0);
+  }}
+  style={{
+    ...buttonStyle,
+    width: "100%",
+    marginBottom: 12
+  }}
+>
+  EXPLORE IN VIRTUAL PORTFOLIO
+</button>
 <MarketOutlook pair={pair} />
 <RugPullDetector pair={pair} />
                 <div
