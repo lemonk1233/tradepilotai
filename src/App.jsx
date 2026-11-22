@@ -1,5 +1,10 @@
 
 import React, { useState } from "react";
+import { supabase } from "./supabase";
+import Login from "./Login";
+import Admin from "./Admin";
+import AccessGate from "./AccessGate";
+import { loadPortfolio, savePortfolio } from "./portfolio";
 
 const API = "https://api.dexscreener.com";
 
@@ -675,12 +680,11 @@ function TokenChart({ pair }) {
 }
 
 
-export default function App() {
+function Dashboard({ userId }) {
   const [activePage, setActivePage] = useState("scanner");
-  const [virtualBalance, setVirtualBalance] = useState(() => {
-    const saved = localStorage.getItem("tradepilotBalance");
-    return saved === null ? 1000 : Number(saved);
-  });
+  const [virtualBalance, setVirtualBalance] = useState(1000);
+const [portfolioReady, setPortfolioReady] = useState(false);
+const [portfolioSyncError, setPortfolioSyncError] = useState("");
   
   const [refillAmount, setRefillAmount] = useState("1000");
   const [portfolioQuery, setPortfolioQuery] = useState("BONK");
@@ -688,6 +692,7 @@ const [portfolioTokens, setPortfolioTokens] = useState([]);
 const [portfolioLoading, setPortfolioLoading] = useState(false);
 const [portfolioError, setPortfolioError] = useState("");
 async function refreshHoldings() {
+  if (!portfolioReady || portfolioSyncError) return;
   const updatedHoldings = await Promise.all(
     holdings.map(async holding => {
       try {
@@ -726,6 +731,10 @@ async function refreshHoldings() {
 }
 
 function virtualSell(index) {
+  if (!portfolioReady || portfolioSyncError) {
+    alert("Portfolio unavailable. Please refresh the page.");
+    return;
+  }
   const holding = holdings[index];
 
   if (!holding) return;
@@ -759,6 +768,10 @@ function virtualSell(index) {
   });
 }
 function virtualBuy(pair) {
+  if (!portfolioReady || portfolioSyncError) {
+    alert("Portfolio unavailable. Please refresh the page.");
+    return;
+  }
   const amount = Number(
     prompt("Enter an amount in virtual USD:")
   );
@@ -840,15 +853,7 @@ async function searchPortfolioTokens() {
     setPortfolioLoading(false);
   }
 }
-  const [holdings, setHoldings] = useState(() => {
-    try {
-      return JSON.parse(
-        localStorage.getItem("tradepilotHoldings") || "[]"
-      );
-    } catch {
-      return [];
-    }
-  });
+const [holdings, setHoldings] = useState([]);
   React.useEffect(() => {
     if (activePage !== "portfolio" || holdings.length === 0) {
       return;
@@ -861,15 +866,64 @@ async function searchPortfolioTokens() {
     return () => clearInterval(interval);
   }, [activePage, holdings]);
   const [portfolioUpdated, setPortfolioUpdated] = useState(null);
-  const [transactions, setTransactions] = useState(() => {
-    try {
-      return JSON.parse(
-        localStorage.getItem("tradepilotTransactions") || "[]"
-      );
-    } catch {
-      return [];
+  const [transactions, setTransactions] = useState([]);
+  React.useEffect(() => {
+    let cancelled = false;
+  
+    setPortfolioReady(false);
+    setPortfolioSyncError("");
+  
+    async function restorePortfolio() {
+      try {
+        const saved = await loadPortfolio(userId);
+  
+        if (cancelled) return;
+  
+        setVirtualBalance(saved.balance);
+        setHoldings(saved.holdings);
+        setTransactions(saved.transactions);
+        setPortfolioReady(true);
+      } catch (error) {
+        if (!cancelled) {
+          setPortfolioSyncError(error.message);
+        }
+      }
     }
-  });
+  
+    restorePortfolio();
+  
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+  const portfolioSaveQueue = React.useRef(Promise.resolve());
+
+React.useEffect(() => {
+  if (!portfolioReady || !userId) return;
+
+  portfolioSaveQueue.current = portfolioSaveQueue.current
+    .catch(() => {})
+    .then(async () => {
+      try {
+        await savePortfolio(
+          userId,
+          virtualBalance,
+          holdings,
+          transactions
+        );
+
+        setPortfolioSyncError("");
+      } catch (error) {
+        setPortfolioSyncError(error.message);
+      }
+    });
+}, [
+  userId,
+  portfolioReady,
+  virtualBalance,
+  holdings,
+  transactions
+]);
   
   function addTransaction(transaction) {
     setTransactions(previous => {
@@ -899,6 +953,10 @@ async function searchPortfolioTokens() {
   }
   
   function refillBalance() {
+    if (!portfolioReady || portfolioSyncError) {
+      alert("Portfolio unavailable. Please refresh the page.");
+      return;
+    }
     const amount = Number(refillAmount);
   
     if (!Number.isFinite(amount) || amount < 1 || amount > 100000) {
@@ -2000,7 +2058,152 @@ async function searchPortfolioTokens() {
   </p>
 </footer>
 
-      </div>
+      
     </div>
+    </div>    
+  );
+}
+export default function App() {
+  const [session, setSession] = useState(null);
+  const [accessType, setAccessType] = useState(null);
+const [accessRefresh, setAccessRefresh] = useState(0);
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setAccessType(null);
+    setShowAdmin(false);
+  
+    if (!session?.user?.id) return;
+  
+    async function checkAccess() {
+      try {
+        const { data, error } = await supabase
+          .from("user_access")
+          .select("access_type")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+  
+        if (error) throw error;
+  
+        if (!cancelled) {
+          setAccessType(data?.access_type || "none");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAccessType("error");
+        }
+      }
+    }
+  
+    checkAccess();
+  
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id, accessRefresh]);
+  
+  const [checking, setChecking] = useState(true);
+
+  React.useEffect(() => {
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((event, session) => {
+        setSession(session);
+        setChecking(false);
+      });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (checking) {
+    return (
+      <div style={{
+        background: "#080c12",
+        color: "#42e6a4",
+        minHeight: "100vh",
+        padding: 30
+      }}>
+        Loading TradePilot AI...
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Login />;
+  }
+  if (accessType === null) {
+  return (
+    <div style={{
+      background: "#080c12",
+      color: "#42e6a4",
+      minHeight: "100vh",
+      padding: 30
+    }}>
+      Checking access permissions...
+    </div>
+  );
+}
+
+if (!["admin", "free", "test_paid"].includes(accessType)) {
+  return (
+    <AccessGate
+      onRefresh={() => setAccessRefresh(prev => prev + 1)}
+    />
+  );
+}
+  if (accessType === "admin" && showAdmin) {
+    return (
+      <Admin onBack={() => setShowAdmin(false)} />
+    );
+  }
+
+  return (
+    <>
+      <div style={{
+        background: "#080c12",
+        padding: "12px 28px",
+        display: "flex",
+        justifyContent: "flex-end"
+      }}>
+        <button
+          onClick={async () => {
+            const { error } = await supabase.auth.signOut();
+            if (error) alert(error.message);
+          }}
+          style={{
+            background: "#101822",
+            color: "#42e6a4",
+            border: "1px solid #42e6a4",
+            borderRadius: 8,
+            padding: "10px 18px",
+            cursor: "pointer",
+            fontWeight: "bold"
+          }}
+        >
+          LOG OUT
+        </button>
+        {accessType === "admin" && (
+  <button
+    onClick={() => setShowAdmin(true)}
+    style={{
+      color: "#42e6a4",
+      background: "#174d3b",
+      border: "1px solid #42e6a4",
+      borderRadius: 8,
+      padding: "10px 18px",
+      marginLeft: 12,
+      fontWeight: "bold",
+      cursor: "pointer"
+    }}
+  >
+    ADMIN
+  </button>
+)}
+      </div>
+      <Dashboard
+  key={session.user.id}
+  userId={session.user.id}
+/>
+    </>
   );
 }
