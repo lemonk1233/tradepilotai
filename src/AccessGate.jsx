@@ -81,7 +81,11 @@ export default function AccessGate({ onRefresh }) {
         throw new Error(data.error);
       }
 
-      alert("Stripe sandbox is ready!");
+      if (!data.testMode || !data.url?.startsWith("https://checkout.stripe.com/")) {
+  throw new Error("Invalid Stripe test checkout response");
+}
+
+window.location.assign(data.url);
     } catch (error) {
       alert("Sandbox error: " + error.message);
     }
