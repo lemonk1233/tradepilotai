@@ -169,9 +169,7 @@ if (
 
     // Stripe can retry a failed webhook.
     return res.status(500).json({
-  error: "Webhook processing failed",
-  code: error.code || "UNKNOWN",
-  status: error.status || null
+  error: "Webhook processing failed"
 });
   }
 }
