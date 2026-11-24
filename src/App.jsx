@@ -331,67 +331,14 @@ function MarketOutlook({ pair }) {
         margin: "20px 0"
       }} />
 
-      <small style={{ color: "#94a3b8" }}>
-        NEXT HOUR OUTLOOK
-      </small>
-
-      <h3 style={{ color: "#94a3b8" }}>
-        UNCERTAIN
-      </h3>
-
-      <svg viewBox="0 0 320 145" width="100%">
-        {[20, 60, 100].map(y => (
-          <line
-            key={y}
-            x1="10"
-            x2="310"
-            y1={y}
-            y2={y}
-            stroke="#243244"
-            strokeDasharray="4 4"
-          />
-        ))}
-
-        <path
-          d="M10 65 L60 55 L110 40 L160 48 L210 22 L310 10"
-          stroke="#42e6a4"
-          strokeWidth="2.5"
-          strokeDasharray="5 4"
-          fill="none"
-        />
-
-        <path
-          d="M10 65 L60 80 L110 75 L160 100 L210 90 L310 120"
-          stroke="#ff647c"
-          strokeWidth="2.5"
-          strokeDasharray="5 4"
-          fill="none"
-        />
-
-        <path
-          d="M10 65 L60 60 L110 70 L160 60 L210 70 L310 65"
-          stroke="#94a3b8"
-          strokeWidth="2"
-          strokeDasharray="5 4"
-          fill="none"
-        />
-
-        <text x="10" y="140" fill="#94a3b8" fontSize="10">
-          Now
-        </text>
-
-        <text x="310" y="140" fill="#94a3b8"
-          fontSize="10" textAnchor="end">
-          +1 Hour
-        </text>
-      </svg>
-
-      <p style={{
-        color: "#94a3b8",
-        fontSize: 10
-      }}>
-        Illustrative future scenarios, not price predictions.
-      </p>
+    <p style={{
+  color: "#94a3b8",
+  fontSize: 12,
+  lineHeight: 1.6
+}}>
+  Future price direction is uncertain.
+  This analysis reflects historical market activity only.
+</p>
     </div>
   );
 }
