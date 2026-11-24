@@ -500,7 +500,7 @@ function TokenChart({ pair }) {
   const max = Math.max(...points.map(c => c.high));
   const range = max - min || 1;
   
-  const candleWidth = 145 / Math.max(points.length, 1);
+  const candleWidth = 290 / Math.max(points.length, 1);
   const risingCandles = points.filter(
     c => c.close > c.open
   ).length;
@@ -622,45 +622,13 @@ function TokenChart({ pair }) {
   );
 })}
 
-<line
-  x1="160"
-  x2="160"
-  y1="5"
-  y2="155"
-  stroke="#64748b"
-  strokeDasharray="4 4"
-/>
-
-<path
-  d="M160 85 L185 70 L210 78 L235 48 L260 55 L285 30 L310 15"
-  stroke="#42e6a4"
-  strokeWidth="2"
-  strokeDasharray="4 3"
-  fill="none"
-/>
-
-<path
-  d="M160 85 L185 100 L210 92 L235 120 L260 112 L285 138 L310 150"
-  stroke="#ff647c"
-  strokeWidth="2"
-  strokeDasharray="4 3"
-  fill="none"
-/>
-
-<text x="235" y="18" fill="#42e6a4"
-  fontSize="16" fontWeight="bold">
-  {risingPercent}%
-</text>
-<text x="235" y="30" fill="#42e6a4" fontSize="9">
-  Historical rises
-</text>
-<text x="225" y="165" fill="#ff647c" fontSize="11">
-{fallingPercent}% past falls
+<text x="15" y="170" fill="#42e6a4" fontSize="10">
+  Rising candles: {risingPercent}%
 </text>
 
-<text x="160" y="170" fill="#94a3b8"
-  fontSize="9" textAnchor="middle">
-  Hypothetical
+<text x="305" y="170" fill="#ff647c"
+  fontSize="10" textAnchor="end">
+  Falling candles: {fallingPercent}%
 </text>
 
             </svg>
