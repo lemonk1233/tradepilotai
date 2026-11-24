@@ -1487,9 +1487,26 @@ React.useEffect(() => {
                     </h3>
 
                     <span style={{ color: theme.muted }}>
-                      {pair.baseToken?.symbol} /{" "}
-                      {pair.quoteToken?.symbol}
-                    </span>
+  {pair.baseToken?.symbol} /{" "}
+  {pair.quoteToken?.symbol}
+</span>
+
+<div style={{
+  color: theme.muted,
+  fontSize: 11,
+  marginTop: 6,
+  overflowWrap: "anywhere"
+}}>
+  Token address: {pair.baseToken?.address || "Unavailable"}
+</div>
+
+<div style={{
+  color: "#fbbf24",
+  fontSize: 10,
+  marginTop: 6
+}}>
+  Tokens with identical names may be different assets.
+</div>
                   </div>
                 </div>
 
