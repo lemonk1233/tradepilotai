@@ -1997,6 +1997,18 @@ aria-label="Search tokens for virtual portfolio"
     Educational market research.
     Historical performance does not predict future results.
   </p>
+  <a
+  href="/policies.html"
+  style={{
+    display: "block",
+    color: "#42e6a4",
+    fontSize: 13,
+    marginTop: 16,
+    textDecoration: "underline"
+  }}
+>
+  Privacy Policy | Terms of Service | Refund Policy
+</a>
 </footer>
 
       
