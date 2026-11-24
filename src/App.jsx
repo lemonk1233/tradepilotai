@@ -1679,9 +1679,7 @@ aria-label="Search token name or address"
       VIRTUAL PORTFOLIO
     </h2>
 
-    <p style={{ color: "#94a3b8" }}>
-      AVAILABLE VIRTUAL CASH
-    </p>
+    
     <div style={{
   background: "#080c12",
   border: "1px solid #243244",
@@ -1708,7 +1706,9 @@ aria-label="Search token name or address"
     Virtual holdings: {holdings.length}
   </p>
 </div>
-
+<p style={{ color: "#94a3b8" }}>
+  AVAILABLE VIRTUAL CASH
+</p>
     <h1 style={{ color: "#42e6a4", fontSize: 42 }}>
       {virtualBalance.toLocaleString("en-US", {
         style: "currency",
