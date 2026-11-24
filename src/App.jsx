@@ -1722,6 +1722,9 @@ aria-label="Search token name or address"
       max="100000"
       value={refillAmount}
       onChange={e => setRefillAmount(e.target.value)}
+      id="refill-amount"
+name="refill-amount"
+aria-label="Virtual balance refill amount"
       placeholder="Enter refill amount"
       style={{
         background: "#080c12",
@@ -1827,6 +1830,9 @@ aria-label="Search token name or address"
   <input
     value={portfolioQuery}
     onChange={e => setPortfolioQuery(e.target.value)}
+    id="portfolio-token-search"
+name="portfolio-token-search"
+aria-label="Search tokens for virtual portfolio"
     placeholder="Search tokens..."
     style={{
       flex: 1,
