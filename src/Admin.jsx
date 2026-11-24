@@ -81,6 +81,10 @@ async function updateAccess(type) {
         <h2>Manage User Access</h2>
 
         <input
+          id="admin-user-uid"
+name="userUid"
+aria-label="User UID"
+autoComplete="off"
           placeholder="Enter User UID"
           value={userId}
           onChange={e => setUserId(e.target.value)}
