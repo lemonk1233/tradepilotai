@@ -99,6 +99,10 @@ export default function Login() {
         <form onSubmit={handleSubmit}>
           <input
             type="email"
+            id="login-email"
+name="email"
+aria-label="Email address"
+autoComplete="email"
             placeholder="Email address"
             value={email}
             onChange={e => setEmail(e.target.value)}
@@ -108,6 +112,10 @@ export default function Login() {
 
           <input
             type="password"
+            id="login-password"
+name="password"
+aria-label="Password"
+autoComplete={signup ? "new-password" : "current-password"}
             placeholder="Password"
             value={password}
             onChange={e => setPassword(e.target.value)}
