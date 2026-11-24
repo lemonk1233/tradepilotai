@@ -3,6 +3,11 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req, res) {
+    if (process.env.VERCEL_ENV === "production") {
+    return res.status(403).json({
+      error: "Checkout is currently disabled"
+    });
+  }
   if (req.method !== "POST") {
     return res.status(405).json({
       error: "Method not allowed"
