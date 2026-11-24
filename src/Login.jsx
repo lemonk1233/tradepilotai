@@ -159,6 +159,19 @@ autoComplete={signup ? "new-password" : "current-password"}
             ? "ALREADY HAVE AN ACCOUNT?"
             : "CREATE NEW ACCOUNT"}
         </button>
+        <a
+  href="/policies.html"
+  style={{
+    display: "block",
+    textAlign: "center",
+    color: "#42e6a4",
+    fontSize: 12,
+    marginTop: 20,
+    textDecoration: "underline"
+  }}
+>
+  Privacy Policy | Terms of Service | Refund Policy
+</a>
       </div>
     </div>
   );
