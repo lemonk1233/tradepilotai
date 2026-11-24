@@ -2,6 +2,8 @@ import React from "react";
 import { supabase } from "./supabase";
 
 export default function AccessGate({ onRefresh }) {
+    const sandboxEnabled =
+    import.meta.env.VITE_ENABLE_SANDBOX_CHECKOUT === "true";
   const button = {
     width: "100%",
     padding: 14,
@@ -44,15 +46,19 @@ export default function AccessGate({ onRefresh }) {
           Market Research & Virtual Portfolio
         </p>
 
-        <h1 style={{
-          color: "#42e6a4",
-          fontSize: 48,
-          marginBottom: 0
-        }}>
-          $10.00
-        </h1>
+       {sandboxEnabled && (
+  <>
+    <h1 style={{
+      color: "#42e6a4",
+      fontSize: 48,
+      marginBottom: 0
+    }}>
+      $10.00
+    </h1>
 
-        <p>One-time access — Test Mode</p>
+    <p>One-time access — Test Mode</p>
+  </>
+)}
 
         <div style={{
           textAlign: "left",
@@ -65,7 +71,7 @@ export default function AccessGate({ onRefresh }) {
           <div>✓ Risk analysis</div>
           <div>✓ Virtual portfolio simulator</div>
         </div>
-
+{sandboxEnabled ? (
         <button
   style={button}
   onClick={async () => {
@@ -106,7 +112,13 @@ window.location.assign(data.url);
   }}
 >
   UNLOCK ACCESS — TEST MODE
+          
 </button>
+) : (
+  <p style={{ color: "#94a3b8" }}>
+    Educational beta — access by invitation only.
+  </p>
+)}
 
         <p style={{ color: "#94a3b8", fontSize: 12 }}>
           No real payments are accepted.
