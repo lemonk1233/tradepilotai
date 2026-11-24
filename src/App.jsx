@@ -1174,6 +1174,9 @@ React.useEffect(() => {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              id="token-search"
+name="token-search"
+aria-label="Search token name or address"
               placeholder="Search token name or address"
               style={{
                 flex: 1,
