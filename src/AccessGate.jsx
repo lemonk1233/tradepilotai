@@ -1,9 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { supabase } from "./supabase";
 
 export default function AccessGate({ onRefresh }) {
-    const sandboxEnabled =
-    import.meta.env.VITE_ENABLE_SANDBOX_CHECKOUT === "true";
+  const [loading, setLoading] = useState(false);
+
+  const sandboxEnabled =
+    import.meta.env.VITE_ENABLE_SANDBOX_CHECKOUT === "true" &&
+    window.location.hostname ===
+      "cloudflare-sandbox.tradepilotai.pages.dev";
+
   const button = {
     width: "100%",
     padding: 14,
@@ -15,6 +20,51 @@ export default function AccessGate({ onRefresh }) {
     cursor: "pointer",
     marginTop: 12
   };
+
+  async function checkout() {
+    setLoading(true);
+
+    try {
+      const { data: authData, error } =
+        await supabase.auth.getSession();
+
+      if (error || !authData.session) {
+        throw new Error("Please sign in again");
+      }
+
+      const response = await fetch(
+        "/api/create-checkout-session",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authData.session.access_token}`
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data.testMode !== true ||
+          data.paymentsEnabled !== false || !data.url) {
+        throw new Error(data.error || "Invalid sandbox response");
+      }
+
+      const destination = new URL(data.url);
+
+      if (
+        destination.protocol !== "https:" ||
+        destination.hostname !== "checkout.stripe.com"
+      ) {
+        throw new Error("Invalid checkout URL");
+      }
+
+      window.location.assign(destination.href);
+    } catch (error) {
+      alert("Sandbox error: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div style={{
@@ -36,9 +86,7 @@ export default function AccessGate({ onRefresh }) {
         padding: 30,
         textAlign: "center"
       }}>
-        <h1 style={{ color: "#42e6a4" }}>
-          TradePilot AI
-        </h1>
+        <h1 style={{ color: "#42e6a4" }}>TradePilot AI</h1>
 
         <h2>🔒 Unlock Full Access</h2>
 
@@ -46,19 +94,18 @@ export default function AccessGate({ onRefresh }) {
           Market Research & Virtual Portfolio
         </p>
 
-       {sandboxEnabled && (
-  <>
-    <h1 style={{
-      color: "#42e6a4",
-      fontSize: 48,
-      marginBottom: 0
-    }}>
-      $10.00
-    </h1>
-
-    <p>One-time access — Test Mode</p>
-  </>
-)}
+        {sandboxEnabled && (
+          <>
+            <h1 style={{
+              color: "#42e6a4",
+              fontSize: 48,
+              marginBottom: 0
+            }}>
+              $10.00
+            </h1>
+            <p>One-time access — Test Mode</p>
+          </>
+        )}
 
         <div style={{
           textAlign: "left",
@@ -71,75 +118,34 @@ export default function AccessGate({ onRefresh }) {
           <div>✓ Risk analysis</div>
           <div>✓ Virtual portfolio simulator</div>
         </div>
-{sandboxEnabled ? (
-        <button
-  style={button}
-  onClick={async () => {
-    try {
-      
-const { data: authData, error: authError } =
-await supabase.auth.getSession();
 
-if (authError || !authData.session) {
-throw new Error("Please sign in again");
-}
-
-const response = await fetch(
-"/api/create-checkout-session",
-{
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${authData.session.access_token}`
-  }
-}
-);
-
-
-      const data = await response.json();         
-
-      if (!response.ok) {
-        throw new Error(data.error);
-      }
-
-     if (data.testMode === true && data.authenticated === true
-    && data.paymentsEnabled === false) {
-  alert("Sandbox authentication successful!");
-} else {
-  throw new Error("Unexpected sandbox response");
-}
-    } catch (error) {
-      alert("Sandbox error: " + error.message);
-    }
-  }}
->
-  UNLOCK ACCESS — TEST MODE
-          
-</button>
-) : (
-  <p style={{ color: "#94a3b8" }}>
-    Educational beta — access by invitation only.
-  </p>
-)}
+        {sandboxEnabled ? (
+          <button
+            style={button}
+            disabled={loading}
+            onClick={checkout}
+          >
+            {loading
+              ? "OPENING TEST CHECKOUT..."
+              : "UNLOCK ACCESS — TEST MODE"}
+          </button>
+        ) : (
+          <p>Educational beta — access by invitation only.</p>
+        )}
 
         <p style={{ color: "#94a3b8", fontSize: 12 }}>
           No real payments are accepted.
         </p>
 
         <button
-          style={{
-            ...button,
-            background: "transparent"
-          }}
+          style={{ ...button, background: "transparent" }}
           onClick={onRefresh}
         >
           REFRESH ACCESS
         </button>
 
         <button
-          style={{
-            ...button,
-            background: "transparent"
-          }}
+          style={{ ...button, background: "transparent" }}
           onClick={async () => {
             const { error } = await supabase.auth.signOut();
             if (error) alert(error.message);
