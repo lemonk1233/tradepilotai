@@ -2029,25 +2029,41 @@ const [accessRefresh, setAccessRefresh] = useState(0);
   
     if (!session?.user?.id) return;
   
-    async function checkAccess() {
-      try {
-        const { data, error } = await supabase
-          .from("user_access")
-          .select("access_type")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-  
-        if (error) throw error;
-  
-        if (!cancelled) {
-          setAccessType(data?.access_type || "none");
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setAccessType("error");
-        }
+   async function checkAccess() {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (cancelled) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("user_access")
+        .select("access_type")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (cancelled) return;
+
+      const type = data?.access_type || "none";
+
+      if (
+        ["admin", "free", "test_paid"].includes(type) ||
+        attempt === 4
+      ) {
+        setAccessType(type);
+        return;
+      }
+    } catch (error) {
+      if (cancelled) return;
+
+      if (attempt === 4) {
+        setAccessType("error");
+        return;
       }
     }
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+}
   
     checkAccess();
   
