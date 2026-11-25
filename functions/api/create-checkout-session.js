@@ -58,3 +58,4 @@ export async function onRequestPost({ request, env }) {
     env.STRIPE_SECRET_KEY?.startsWith("sk_test_") === true &&
     env.STRIPE_PRICE_ID?.startsWith("price_") === true
 });
+}
