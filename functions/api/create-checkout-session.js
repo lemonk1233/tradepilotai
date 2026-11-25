@@ -27,7 +27,17 @@ export async function onRequestPost({ request, env }) {
     const supabase = createClient(
       env.VITE_SUPABASE_URL,
       env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      { auth: { persistSession: false, autoRefreshToken: false } }
+      {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
+  },
+  global: {
+    headers: {
+      Authorization: authorization
+    }
+  }
+}
     );
 
     const { data, error } = await supabase.auth.getUser(
