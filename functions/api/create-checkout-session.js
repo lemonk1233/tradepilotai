@@ -37,7 +37,25 @@ export async function onRequestPost({ request, env }) {
     if (error || !data?.user) {
       return Response.json({ error: "Invalid login" }, { status: 401 });
     }
+const { data: access, error: accessError } = await supabase
+  .from("user_access")
+  .select("access_type")
+  .eq("user_id", data.user.id)
+  .maybeSingle();
 
+if (accessError) {
+  return Response.json(
+    { error: "Unable to verify account access" },
+    { status: 503 }
+  );
+}
+
+if (["admin", "free", "test_paid"].includes(access?.access_type)) {
+  return Response.json(
+    { error: "You already have access" },
+    { status: 409 }
+  );
+}
     const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
       httpClient: Stripe.createFetchHttpClient()
     });
