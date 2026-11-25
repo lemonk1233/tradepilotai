@@ -50,9 +50,11 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  return Response.json({
-    testMode: true,
-    authenticated: true,
-    paymentsEnabled: false
-  });
-}
+ return Response.json({
+  testMode: true,
+  authenticated: true,
+  paymentsEnabled: false,
+  stripeConfigured:
+    env.STRIPE_SECRET_KEY?.startsWith("sk_test_") === true &&
+    env.STRIPE_PRICE_ID?.startsWith("price_") === true
+});
