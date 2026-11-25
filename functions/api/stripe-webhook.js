@@ -1,3 +1,5 @@
+import Stripe from "stripe";
+
 export async function onRequestPost({ request, env }) {
   if (
     new URL(request.url).hostname !==
@@ -6,6 +8,16 @@ export async function onRequestPost({ request, env }) {
     return Response.json(
       { error: "Webhook disabled" },
       { status: 403 }
+    );
+  }
+
+  if (
+    !env.STRIPE_SECRET_KEY?.startsWith("sk_test_") ||
+    !env.STRIPE_WEBHOOK_SECRET
+  ) {
+    return Response.json(
+      { error: "Sandbox configuration required" },
+      { status: 503 }
     );
   }
 
@@ -18,12 +30,38 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  return Response.json({
-    testMode: true,
-    signaturePresent: true,
-    webhookConfigured: Boolean(env.STRIPE_WEBHOOK_SECRET),
-    databaseConfigured: Boolean(env.SUPABASE_SECRET_KEY),
-    paymentsEnabled: false,
-    accessGranted: false
-  });
+  try {
+    const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
+      httpClient: Stripe.createFetchHttpClient()
+    });
+
+    const event = await stripe.webhooks.constructEventAsync(
+      await request.text(),
+      signature,
+      env.STRIPE_WEBHOOK_SECRET,
+      300,
+      Stripe.createSubtleCryptoProvider()
+    );
+
+    if (event.livemode !== false) {
+      return Response.json(
+        { error: "Live events disabled" },
+        { status: 403 }
+      );
+    }
+
+    return Response.json({
+      received: true,
+      signatureVerified: true,
+      testMode: true,
+      paymentsEnabled: false,
+      accessGranted: false
+    });
+
+  } catch {
+    return Response.json(
+      { error: "Webhook verification failed" },
+      { status: 400 }
+    );
+  }
 }
