@@ -9,16 +9,20 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
+  const signature = request.headers.get("stripe-signature");
+
+  if (!signature) {
+    return Response.json(
+      { error: "Missing signature" },
+      { status: 400 }
+    );
+  }
+
   return Response.json({
     testMode: true,
-    webhookConfigured: Boolean(
-      env.STRIPE_WEBHOOK_SECRET
-    ),
-    stripeConfigured:
-      env.STRIPE_SECRET_KEY?.startsWith("sk_test_") === true,
-    databaseConfigured:
-      env.VITE_SUPABASE_URL ===
-      "https://qltvqhlvccjkglxitbzr.supabase.co",
+    signaturePresent: true,
+    webhookConfigured: Boolean(env.STRIPE_WEBHOOK_SECRET),
+    databaseConfigured: Boolean(env.SUPABASE_SECRET_KEY),
     paymentsEnabled: false,
     accessGranted: false
   });
