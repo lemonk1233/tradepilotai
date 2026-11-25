@@ -50,12 +50,43 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
- return Response.json({
-  testMode: true,
-  authenticated: true,
-  paymentsEnabled: false,
-  stripeConfigured:
+  const stripeConfigured =
     env.STRIPE_SECRET_KEY?.startsWith("sk_test_") === true &&
-    env.STRIPE_PRICE_ID?.startsWith("price_") === true
-});
+    env.STRIPE_PRICE_ID?.startsWith("price_") === true;
+
+  let stripeVerified = false;
+
+  if (stripeConfigured) {
+    try {
+      const response = await fetch(
+        "https://api.stripe.com/v1/prices/" +
+          encodeURIComponent(env.STRIPE_PRICE_ID),
+        {
+          headers: {
+            Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`
+          }
+        }
+      );
+
+      const price = await response.json();
+
+      stripeVerified =
+        response.ok &&
+        price.livemode === false &&
+        price.active === true &&
+        price.currency === "usd" &&
+        price.unit_amount === 1000 &&
+        price.type === "one_time";
+    } catch {
+      stripeVerified = false;
+    }
+  }
+
+  return Response.json({
+    testMode: true,
+    authenticated: true,
+    paymentsEnabled: false,
+    stripeConfigured,
+    stripeVerified
+  });
 }
