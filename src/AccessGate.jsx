@@ -101,11 +101,12 @@ const response = await fetch(
         throw new Error(data.error);
       }
 
-      if (!data.testMode || !data.url?.startsWith("https://checkout.stripe.com/")) {
-  throw new Error("Invalid Stripe test checkout response");
+     if (data.testMode === true && data.authenticated === true
+    && data.paymentsEnabled === false) {
+  alert("Sandbox authentication successful!");
+} else {
+  throw new Error("Unexpected sandbox response");
 }
-
-window.location.assign(data.url);
     } catch (error) {
       alert("Sandbox error: " + error.message);
     }
