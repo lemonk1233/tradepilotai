@@ -2097,7 +2097,7 @@ const [accessRefresh, setAccessRefresh] = useState(0);
   );
 }
 
-if (!["admin", "free"].includes(accessType)) {
+if (!["admin", "free", "paid"].includes(accessType)) {
   return (
     <AccessGate
       onRefresh={() => setAccessRefresh(prev => prev + 1)}
