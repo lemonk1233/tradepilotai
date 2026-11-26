@@ -93,8 +93,10 @@ if (["admin", "free", "test_paid"].includes(access?.access_type)) {
       },
       success_url: origin + "/?checkout=success",
       cancel_url: origin + "/?checkout=cancelled"
-    });
-
+}, {
+  idempotencyKey:
+    `sandbox-${data.user.id}-${price.id}-${Math.floor(Date.now() / 1800000)}`
+});
     if (session.livemode !== false || !session.url) {
       throw new Error("Invalid sandbox session");
     }
