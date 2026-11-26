@@ -1,16 +1,21 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
+const ORIGIN = "https://tradepilotai.pages.dev";
+const DATABASE = "https://odehgxzsitulittlwyxf.supabase.co";
+
 export async function onRequestPost({ request, env }) {
   try {
     if (
-      !env.STRIPE_SECRET_KEY?.startsWith("sk_test_") ||
+      env.ENABLE_LIVE_PAYMENTS !== "true" ||
+      new URL(request.url).origin !== ORIGIN ||
+      !/^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY || "") ||
       !env.STRIPE_PRICE_ID ||
-      !env.VITE_SUPABASE_URL ||
+      env.VITE_SUPABASE_URL !== DATABASE ||
       !env.VITE_SUPABASE_PUBLISHABLE_KEY
     ) {
       return Response.json(
-        { error: "Test configuration required" },
+        { error: "Production checkout disabled" },
         { status: 503 }
       );
     }
@@ -26,7 +31,7 @@ export async function onRequestPost({ request, env }) {
     }
 
     const supabase = createClient(
-      env.VITE_SUPABASE_URL,
+      DATABASE,
       env.VITE_SUPABASE_PUBLISHABLE_KEY,
       {
         auth: {
@@ -58,16 +63,10 @@ export async function onRequestPost({ request, env }) {
         .maybeSingle();
 
     if (accessError) {
-      return Response.json(
-        { error: "Unable to verify access" },
-        { status: 503 }
-      );
+      throw new Error("Access verification failed");
     }
 
-    if (
-      ["admin", "free", "paid", "test_paid"]
-        .includes(access?.access_type)
-    ) {
+    if (["admin", "free", "paid"].includes(access?.access_type)) {
       return Response.json(
         { error: "You already have access" },
         { status: 409 }
@@ -83,47 +82,55 @@ export async function onRequestPost({ request, env }) {
     );
 
     if (
-      price.livemode ||
+      !price.livemode ||
       !price.active ||
       price.unit_amount !== 1000 ||
       price.currency !== "usd" ||
       price.type !== "one_time"
     ) {
       return Response.json(
-        { error: "Invalid test price" },
-        { status: 403 }
+        { error: "Invalid production price" },
+        { status: 503 }
       );
     }
 
-    const origin = new URL(request.url).origin;
-
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price: price.id,
-          quantity: 1
-        }
-      ],
-      client_reference_id: data.user.id,
-      metadata: {
-        user_id: data.user.id,
-        environment: "test"
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price: price.id,
+            quantity: 1
+          }
+        ],
+        client_reference_id: data.user.id,
+        metadata: {
+          user_id: data.user.id,
+          environment: "production"
+        },
+        success_url: ORIGIN + "/?checkout=success",
+        cancel_url: ORIGIN + "/?checkout=cancelled"
       },
-      success_url: origin + "/?checkout=success",
-      cancel_url: origin + "/?checkout=cancelled"
-    });
+      {
+        idempotencyKey:
+          `tradepilot-${data.user.id}-${price.id}-${Math.floor(Date.now() / 1800000)}`
+      }
+    );
+
+    if (!session.livemode || !session.url) {
+      throw new Error("Invalid checkout session");
+    }
 
     return Response.json({
-      testMode: true,
-      paymentsEnabled: false,
+      testMode: false,
+      paymentsEnabled: true,
       url: session.url
     });
 
   } catch {
     return Response.json(
-      { error: "Checkout failed" },
+      { error: "Unable to create checkout" },
       { status: 500 }
     );
   }
