@@ -97,7 +97,24 @@ export async function onRequestPost({ request, env }) {
     if (accountError || !account?.user) {
       throw new Error("Sandbox user verification failed");
     }
+const { data: existingAccess, error: accessError } =
+  await supabase
+    .from("user_access")
+    .select("access_type")
+    .eq("user_id", userId)
+    .maybeSingle();
 
+if (accessError) throw accessError;
+
+if (["admin", "free", "test_paid"].includes(
+  existingAccess?.access_type
+)) {
+  return Response.json({
+    received: true,
+    accessGranted: true,
+    alreadyHasAccess: true
+  });
+}
     const { error } = await supabase
       .from("user_access")
       .upsert(
