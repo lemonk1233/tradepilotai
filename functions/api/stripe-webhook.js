@@ -1,17 +1,20 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
+const ORIGIN = "https://tradepilotai.pages.dev";
+const DATABASE = "https://odehgxzsitulittlwyxf.supabase.co";
+
 export async function onRequestPost({ request, env }) {
   if (
-    !env.STRIPE_SECRET_KEY?.startsWith("sk_test_") ||
+    new URL(request.url).origin !== ORIGIN ||
+    !/^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY || "") ||
     !env.STRIPE_WEBHOOK_SECRET ||
     !env.STRIPE_PRICE_ID ||
     !env.SUPABASE_SECRET_KEY ||
-    env.VITE_SUPABASE_URL !==
-      "https://qltvqhlvccjkglxitbzr.supabase.co"
+    env.VITE_SUPABASE_URL !== DATABASE
   ) {
     return Response.json(
-      { error: "Sandbox configuration required" },
+      { error: "Production configuration required" },
       { status: 503 }
     );
   }
@@ -23,13 +26,20 @@ export async function onRequestPost({ request, env }) {
   let event;
 
   try {
+    const signature = request.headers.get("stripe-signature");
+
+    if (!signature) {
+      throw new Error("Missing signature");
+    }
+
     event = await stripe.webhooks.constructEventAsync(
       await request.text(),
-      request.headers.get("stripe-signature"),
+      signature,
       env.STRIPE_WEBHOOK_SECRET,
       300,
       Stripe.createSubtleCryptoProvider()
     );
+
   } catch {
     return Response.json(
       { error: "Invalid signature" },
@@ -37,9 +47,9 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  if (event.livemode) {
+  if (!event.livemode) {
     return Response.json(
-      { error: "Live events disabled" },
+      { error: "Test events rejected" },
       { status: 403 }
     );
   }
@@ -56,12 +66,12 @@ export async function onRequestPost({ request, env }) {
     const userId = session.metadata?.user_id;
 
     if (
-      session.livemode ||
+      !session.livemode ||
       session.mode !== "payment" ||
       session.payment_status !== "paid" ||
       session.amount_total !== 1000 ||
       session.currency !== "usd" ||
-      session.metadata?.environment !== "test" ||
+      session.metadata?.environment !== "production" ||
       !userId ||
       userId !== session.client_reference_id
     ) {
@@ -89,7 +99,7 @@ export async function onRequestPost({ request, env }) {
     }
 
     const supabase = createClient(
-      env.VITE_SUPABASE_URL,
+      DATABASE,
       env.SUPABASE_SECRET_KEY,
       {
         auth: {
@@ -106,37 +116,27 @@ export async function onRequestPost({ request, env }) {
       throw new Error("Account unavailable");
     }
 
-    const { error: insertError } = await supabase
-      .from("user_access")
-      .upsert(
-        {
-          user_id: userId,
-          access_type: "test_paid"
-        },
-        {
-          onConflict: "user_id",
-          ignoreDuplicates: true
-        }
-      );
+    const { data, error } = await supabase.rpc(
+      "record_verified_payment",
+      {
+        p_session_id: session.id,
+        p_user_id: userId,
+        p_amount: session.amount_total,
+        p_currency: session.currency
+      }
+    );
 
-    if (insertError) throw insertError;
-
-    const { error: updateError } = await supabase
-      .from("user_access")
-      .update({ access_type: "test_paid" })
-      .eq("user_id", userId)
-      .eq("access_type", "none");
-
-    if (updateError) throw updateError;
+    if (error) throw error;
 
     return Response.json({
       received: true,
-      testMode: true
+      processed: true,
+      alreadyProcessed: data === false
     });
 
   } catch {
     return Response.json(
-      { error: "Fulfillment failed" },
+      { error: "Payment fulfillment failed" },
       { status: 500 }
     );
   }
