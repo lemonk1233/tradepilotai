@@ -54,13 +54,7 @@ export async function onRequestPost({ request, env }) {
       );
     }
 
-    // Restrict initial testing to administrators.
-    if (access.access_type !== "admin") {
-      return Response.json(
-        { error: "AI assistant is currently in testing" },
-        { status: 403 }
-      );
-    }
+   
 
     const { message, token } = await request.json();
 
