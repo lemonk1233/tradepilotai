@@ -128,6 +128,7 @@ if (!usage.allowed) {
   );
 }
     let marketData = "No token selected.";
+let marketDataAvailable = false;
 
     if (typeof token === "string" && token.trim()) {
       const query = token.trim().slice(0, 100);
@@ -167,6 +168,7 @@ if (!usage.allowed) {
           console.log("Matching Solana pairs:", pairs.length);
 
           if (pairs.length > 0) {
+            marketDataAvailable = true;
             marketData = JSON.stringify({
               source: "DexScreener",
               retrievedAt: new Date().toISOString(),
@@ -203,7 +205,20 @@ if (!usage.allowed) {
       }
     }
 
-
+if (!marketDataAvailable) {
+  return Response.json({
+    reply:
+      "MARKET VERDICT: Unknown\n\n" +
+      "Insufficient market data. Nexus could not retrieve reliable live market information for this token.\n\n" +
+      "Please try again later or verify the token address. No market verdict can be provided without reliable data.",
+    usage: {
+      limit: usage.limit,
+      used: usage.used,
+      remaining: usage.remaining,
+      resets_at: usage.resets_at
+    }
+  });
+}
     const result = await env.AI.run(
       "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
       {
