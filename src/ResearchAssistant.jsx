@@ -81,6 +81,21 @@ export default function ResearchAssistant() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [usage, setUsage] = useState(null);
+
+async function refreshUsage() {
+  const { data, error } = await supabase.rpc(
+    "get_nexus_usage"
+  );
+
+  if (!error && data) {
+    setUsage(data);
+  }
+}
+
+useEffect(() => {
+  refreshUsage();
+}, []);
 
   const bottomRef = useRef(null);
   const busyRef = useRef(false);
@@ -139,6 +154,9 @@ export default function ResearchAssistant() {
       );
 
       const result = await response.json();
+      if (result.usage) {
+  setUsage(result.usage);
+}
 
       if (!response.ok) {
         throw new Error(
@@ -163,7 +181,8 @@ export default function ResearchAssistant() {
       ]);
     } finally {
       busyRef.current = false;
-      setLoading(false);
+setLoading(false);
+refreshUsage();
     }
   }
 
@@ -688,7 +707,51 @@ export default function ResearchAssistant() {
             </div>
           </div>
         </div>
+{usage && (
+  <div style={{
+    marginLeft: "auto",
+    marginRight: 15,
+    minWidth: 95
+  }}>
+    <div style={{
+      fontSize: 12,
+      fontWeight: 600,
+      color: usage.remaining > 5
+        ? "#42e6a4"
+        : "#ff7373"
+    }}>
+      {usage.remaining} / {usage.limit} left
+    </div>
 
+    <div style={{
+      height: 4,
+      background: "#29353d",
+      borderRadius: 10,
+      marginTop: 6,
+      overflow: "hidden"
+    }}>
+      <div style={{
+        height: "100%",
+        width: `${usage.limit > 0
+          ? usage.remaining / usage.limit * 100
+          : 0}%`,
+        background: usage.remaining > 5
+          ? "#42e6a4"
+          : "#ff7373",
+        borderRadius: 10,
+        transition: "width 0.3s ease"
+      }} />
+    </div>
+
+    <div style={{
+      fontSize: 10,
+      color: "#8493a3",
+      marginTop: 5
+    }}>
+      Resets Monday
+    </div>
+  </div>
+)}
         <button
           className="nexus-new-chat"
           onClick={newChat}
