@@ -206,17 +206,28 @@ let marketDataAvailable = false;
     }
 
 if (!marketDataAvailable) {
+  const { error: refundError } =
+    await secureSupabase.rpc(
+      "refund_nexus_message_secure",
+      {
+        p_user_id: data.user.id,
+        p_week_start: new Date(
+          Date.parse(usage.resets_at) - 7 * 86400000
+        ).toISOString().slice(0, 10)
+      }
+    );
+
+  if (refundError) {
+    console.error("Nexus refund error:", refundError);
+  }
+
   return Response.json({
     reply:
       "MARKET VERDICT: Unknown\n\n" +
-      "Insufficient market data. Nexus could not retrieve reliable live market information for this token.\n\n" +
-      "Please try again later or verify the token address. No market verdict can be provided without reliable data.",
-    usage: {
-      limit: usage.limit,
-      used: usage.used,
-      remaining: usage.remaining,
-      resets_at: usage.resets_at
-    }
+      "Insufficient market data. Nexus could not retrieve reliable live market information.\n\n" +
+      (refundError
+        ? "Please try again later."
+        : "Your weekly message has been refunded.")
   });
 }
     const result = await env.AI.run(
