@@ -78,40 +78,79 @@ export async function onRequestPost({ request, env }) {
     let marketData = "No token selected.";
 
     if (typeof token === "string" && token.trim()) {
-      const response = await fetch(
-        "https://api.dexscreener.com/latest/dex/search?q=" +
-        encodeURIComponent(token.slice(0, 100))
-      );
+      const query = token.trim().slice(0, 100);
 
-      if (response.ok) {
-        const result = await response.json();
-
-        const pairs = (result.pairs || [])
-          .filter(pair => pair.chainId === "solana")
-          .sort(
-            (a, b) =>
-              (b.liquidity?.usd || 0) -
-              (a.liquidity?.usd || 0)
-          )
-          .slice(0, 3);
-
-        marketData = JSON.stringify(
-          pairs.map(pair => ({
-            name: pair.baseToken?.name,
-            symbol: pair.baseToken?.symbol,
-            address: pair.baseToken?.address,
-            price: pair.priceUsd,
-            marketCap: pair.marketCap,
-            liquidity: pair.liquidity,
-            volume: pair.volume,
-            priceChange: pair.priceChange,
-            transactions: pair.txns
-          }))
+      try {
+        const response = await fetch(
+          "https://api.dexscreener.com/latest/dex/search?q=" +
+          encodeURIComponent(query),
+          {
+            headers: {
+              "Accept": "application/json"
+            }
+          }
         );
-      } else {
-        marketData = "Live market data unavailable.";
+
+        console.log("DexScreener status:", response.status);
+
+        if (response.ok) {
+          const market = await response.json();
+
+          const pairs = (market.pairs || [])
+            .filter(pair => pair.chainId === "solana")
+            .filter(pair =>
+              pair.baseToken?.symbol?.toLowerCase() ===
+                query.toLowerCase() ||
+              pair.baseToken?.address === query ||
+              pair.baseToken?.name?.toLowerCase() ===
+                query.toLowerCase()
+            )
+            .sort(
+              (a, b) =>
+                (b.liquidity?.usd || 0) -
+                (a.liquidity?.usd || 0)
+            )
+            .slice(0, 3);
+
+          console.log("Matching Solana pairs:", pairs.length);
+
+          if (pairs.length > 0) {
+            marketData = JSON.stringify({
+              source: "DexScreener",
+              retrievedAt: new Date().toISOString(),
+              token: query,
+              pairs: pairs.map(pair => ({
+                name: pair.baseToken?.name,
+                symbol: pair.baseToken?.symbol,
+                address: pair.baseToken?.address,
+                dex: pair.dexId,
+                priceUSD: pair.priceUsd,
+                marketCap: pair.marketCap,
+                liquidityUSD: pair.liquidity?.usd,
+                volume: pair.volume,
+                priceChange: pair.priceChange,
+                transactions: pair.txns,
+                url: pair.url
+              }))
+            });
+          } else {
+            marketData =
+              "No matching Solana token found for " + query;
+          }
+        } else {
+          marketData =
+            "DexScreener returned HTTP " + response.status;
+        }
+      } catch (marketError) {
+        console.error(
+          "Market data error:",
+          marketError.message
+        );
+
+        marketData = "Unable to retrieve live market data.";
       }
     }
+
 
     const result = await env.AI.run(
       "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
