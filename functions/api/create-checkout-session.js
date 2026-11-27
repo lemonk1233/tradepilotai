@@ -6,34 +6,35 @@ const DATABASE = "https://odehgxzsitulittlwyxf.supabase.co";
 
 export async function onRequestPost({ request, env }) {
   try {
-    if (
-     const checks = {
-  livePaymentsEnabled:
-    env.ENABLE_LIVE_PAYMENTS === "true",
-  correctOrigin:
-    new URL(request.url).origin === ORIGIN,
-  validStripeKeyFormat:
-    /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY || ""),
-  stripePriceConfigured:
-    Boolean(env.STRIPE_PRICE_ID),
-  correctDatabase:
-    env.VITE_SUPABASE_URL === DATABASE,
-  supabaseKeyConfigured:
-    Boolean(env.VITE_SUPABASE_PUBLISHABLE_KEY)
-};
+    const checks = {
+      livePaymentsEnabled:
+        env.ENABLE_LIVE_PAYMENTS === "true",
+      correctOrigin:
+        new URL(request.url).origin === ORIGIN,
+      validStripeKeyFormat:
+        /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY || ""),
+      stripePriceConfigured:
+        Boolean(env.STRIPE_PRICE_ID),
+      correctDatabase:
+        env.VITE_SUPABASE_URL === DATABASE,
+      supabaseKeyConfigured:
+        Boolean(env.VITE_SUPABASE_PUBLISHABLE_KEY)
+    };
 
-const failedChecks = Object.keys(checks).filter(
-  key => !checks[key]
-);
+    const failedChecks = Object.keys(checks).filter(
+      key => !checks[key]
+    );
 
-if (failedChecks.length > 0) {
-  console.error("Checkout configuration:", failedChecks);
+    if (failedChecks.length > 0) {
+      console.error("Checkout configuration:", failedChecks);
 
-  return Response.json(
-    { error: "Configuration failed: " + failedChecks.join(", ") },
-    { status: 503 }
-  );
-}
+      return Response.json(
+        {
+          error: "Configuration failed: " + failedChecks.join(", ")
+        },
+        { status: 503 }
+      );
+    }
 
     const authorization =
       request.headers.get("Authorization") || "";
@@ -143,7 +144,9 @@ if (failedChecks.length > 0) {
       url: session.url
     });
 
-  } catch {
+  } catch (error) {
+    console.error("Checkout failed:", error?.code || error?.name);
+
     return Response.json(
       { error: "Unable to create checkout" },
       { status: 500 }
