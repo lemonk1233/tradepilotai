@@ -224,7 +224,8 @@ export default function ResearchAssistant() {
         margin: "15px 0"
       }}>
         {[
-          "Analyze this token",
+          "Get market verdict",
+"Analyze this token",
           "Explain market momentum",
           "Check potential risks",
           "Explain buying and selling activity"
