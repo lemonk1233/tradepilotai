@@ -87,6 +87,22 @@ if (usageError || !usage) {
 }
 
 if (!usage.allowed) {
+  if (usage.reason === "global_limit") {
+    return Response.json(
+      {
+        error: "Nexus has reached its daily capacity. Please try again after midnight UTC."
+      },
+      { status: 429 }
+    );
+  }
+
+  if (usage.reason === "access_denied") {
+    return Response.json(
+      { error: "Nexus access required." },
+      { status: 403 }
+    );
+  }
+
   return Response.json(
     {
       error: "Weekly message limit reached. Your allowance resets on Monday at midnight UTC.",
