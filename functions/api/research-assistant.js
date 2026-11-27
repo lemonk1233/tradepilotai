@@ -74,7 +74,27 @@ export async function onRequestPost({ request, env }) {
         { status: 400 }
       );
     }
+const { data: usage, error: usageError } =
+  await supabase.rpc("consume_nexus_message");
 
+if (usageError || !usage) {
+  console.error("Nexus usage error:", usageError);
+
+  return Response.json(
+    { error: "Unable to verify weekly allowance" },
+    { status: 503 }
+  );
+}
+
+if (!usage.allowed) {
+  return Response.json(
+    {
+      error: "Weekly message limit reached. Your allowance resets on Monday at midnight UTC.",
+      usage
+    },
+    { status: 429 }
+  );
+}
     let marketData = "No token selected.";
 
     if (typeof token === "string" && token.trim()) {
@@ -158,8 +178,8 @@ export async function onRequestPost({ request, env }) {
         messages: [
           {
             role: "system",
-            content: `You are TradePilot Intelligence,
-an advanced cryptocurrency market research assistant.
+content: `You are Nexus, an AI market research
+assistant developed for TradePilot AI.
 
 Analyze the supplied live market data, including:
 - Trading volume
@@ -236,8 +256,14 @@ Keep responses professional, clear and concise.`
     );
 
     return Response.json({
-      reply: result.response || "No response generated."
-    });
+  reply: result.response || "No response generated.",
+  usage: {
+    limit: usage.limit,
+    used: usage.used,
+    remaining: usage.remaining,
+    resets_at: usage.resets_at
+  }
+});
 
    } catch (error) {
     console.error("AI assistant error:", {
