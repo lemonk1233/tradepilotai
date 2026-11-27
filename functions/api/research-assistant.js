@@ -149,21 +149,35 @@ let marketDataAvailable = false;
         if (response.ok) {
           const market = await response.json();
 
-          const pairs = (market.pairs || [])
-            .filter(pair => pair.chainId === "solana")
-            .filter(pair =>
-              pair.baseToken?.symbol?.toLowerCase() ===
-                query.toLowerCase() ||
-              pair.baseToken?.address === query ||
-              pair.baseToken?.name?.toLowerCase() ===
-                query.toLowerCase()
-            )
-            .sort(
-              (a, b) =>
-                (b.liquidity?.usd || 0) -
-                (a.liquidity?.usd || 0)
-            )
-            .slice(0, 3);
+          const matchingPairs = (market.pairs || [])
+  .filter(pair => pair.chainId === "solana")
+  .filter(pair => pair.baseToken?.address)
+  .filter(pair =>
+    pair.baseToken?.symbol?.toLowerCase() ===
+      query.toLowerCase() ||
+    pair.baseToken?.address === query ||
+    pair.baseToken?.name?.toLowerCase() ===
+      query.toLowerCase()
+  )
+  .sort(
+    (a, b) =>
+      (b.liquidity?.usd || 0) -
+      (a.liquidity?.usd || 0)
+  );
+
+const exactMatch = matchingPairs.find(
+  pair => pair.baseToken.address === query
+);
+
+const selectedAddress =
+  exactMatch?.baseToken.address ||
+  matchingPairs[0]?.baseToken.address;
+
+const pairs = matchingPairs
+  .filter(pair =>
+    pair.baseToken.address === selectedAddress
+  )
+  .slice(0, 3);
 
           console.log("Matching Solana pairs:", pairs.length);
 
