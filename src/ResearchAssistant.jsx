@@ -203,7 +203,47 @@ export default function ResearchAssistant() {
                   : "TRADEPILOT AI"}
               </div>
 
-              {item.content}
+              {item.role === "assistant"
+  ? String(item.content).split("\n").map((line, i) => {
+      const value = line.trim().toLowerCase()
+        .replace(/[*.]/g, "");
+
+      let color = "#e8eef7";
+      let bold = false;
+
+      if (value === "favorable") {
+        color = "#42e6a4";
+        bold = true;
+      } else if (value === "unfavorable") {
+        color = "#ff5252";
+        bold = true;
+      } else if (value === "neutral") {
+        color = "#facc15";
+        bold = true;
+      } else if (
+        value === "high" ||
+        value === "very high"
+      ) {
+        color = "#ff5252";
+        bold = true;
+      } else if (value === "moderate") {
+        color = "#facc15";
+        bold = true;
+      } else if (value.endsWith(":")) {
+        bold = true;
+      }
+
+      return (
+        <div key={i} style={{
+          color,
+          fontWeight: bold ? 700 : 400,
+          minHeight: 8
+        }}>
+          {line}
+        </div>
+      );
+    })
+  : item.content}
             </div>
           </div>
         ))}
