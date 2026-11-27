@@ -4,6 +4,7 @@ import { supabase } from "./supabase";
 import Login from "./Login";
 import Admin from "./Admin";
 import AccessGate from "./AccessGate";
+import ResearchAssistant from "./ResearchAssistant";
 import { loadPortfolio, savePortfolio } from "./portfolio";
 
 const API = "https://api.dexscreener.com";
@@ -1144,7 +1145,19 @@ React.useEffect(() => {
     }}
     onClick={() => setActivePage("portfolio")}
   >
-    VIRTUAL PORTFOLIO
+       VIRTUAL PORTFOLIO
+  </button>
+
+  <button
+    style={{
+      ...buttonStyle,
+      flex: 1,
+      background: activePage === "assistant"
+        ? "#174d3b" : "#101822"
+    }}
+    onClick={() => setActivePage("assistant")}
+  >
+    ✦ AI ASSISTANT
   </button>
 </div>
 <div style={{
@@ -1666,6 +1679,9 @@ aria-label="Search token name or address"
         </div>
 
         </div>               
+        {activePage === "assistant" && (
+  <ResearchAssistant />
+)}
         {activePage === "portfolio" && (
 
 <div style={{
