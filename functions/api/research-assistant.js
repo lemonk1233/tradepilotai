@@ -46,7 +46,14 @@ export async function onRequestPost({ request, env }) {
 
     if (
       accessError ||
-      !["admin", "free", "paid"].includes(access?.access_type)
+      !(
+  ["admin", "free", "paid"].includes(access?.access_type) ||
+  (
+    env.VITE_ENABLE_SANDBOX_CHECKOUT === "true" &&
+    env.VITE_ENABLE_PRODUCTION_CHECKOUT !== "true" &&
+    access?.access_type === "test_paid"
+  )
+)
     ) {
       return Response.json(
         { error: "Premium access required" },
