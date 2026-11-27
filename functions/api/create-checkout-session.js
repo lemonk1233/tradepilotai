@@ -7,18 +7,33 @@ const DATABASE = "https://odehgxzsitulittlwyxf.supabase.co";
 export async function onRequestPost({ request, env }) {
   try {
     if (
-      env.ENABLE_LIVE_PAYMENTS !== "true" ||
-      new URL(request.url).origin !== ORIGIN ||
-      !/^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY || "") ||
-      !env.STRIPE_PRICE_ID ||
-      env.VITE_SUPABASE_URL !== DATABASE ||
-      !env.VITE_SUPABASE_PUBLISHABLE_KEY
-    ) {
-      return Response.json(
-        { error: "Production checkout disabled" },
-        { status: 503 }
-      );
-    }
+     const checks = {
+  livePaymentsEnabled:
+    env.ENABLE_LIVE_PAYMENTS === "true",
+  correctOrigin:
+    new URL(request.url).origin === ORIGIN,
+  validStripeKeyFormat:
+    /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY || ""),
+  stripePriceConfigured:
+    Boolean(env.STRIPE_PRICE_ID),
+  correctDatabase:
+    env.VITE_SUPABASE_URL === DATABASE,
+  supabaseKeyConfigured:
+    Boolean(env.VITE_SUPABASE_PUBLISHABLE_KEY)
+};
+
+const failedChecks = Object.keys(checks).filter(
+  key => !checks[key]
+);
+
+if (failedChecks.length > 0) {
+  console.error("Checkout configuration:", failedChecks);
+
+  return Response.json(
+    { error: "Configuration failed: " + failedChecks.join(", ") },
+    { status: 503 }
+  );
+}
 
     const authorization =
       request.headers.get("Authorization") || "";
