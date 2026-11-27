@@ -2113,7 +2113,16 @@ const [accessRefresh, setAccessRefresh] = useState(0);
   );
 }
 
-if (!["admin", "free", "paid"].includes(accessType)) {
+const sandboxPaidAccess =
+  import.meta.env.VITE_ENABLE_SANDBOX_CHECKOUT === "true" &&
+  import.meta.env.VITE_ENABLE_PRODUCTION_CHECKOUT !== "true" &&
+  window.location.hostname === "ai-research-assistant.tradepilotai.pages.dev" &&
+  accessType === "test_paid";
+
+if (
+  !["admin", "free", "paid"].includes(accessType) &&
+  !sandboxPaidAccess
+) {
   return (
     <AccessGate
       onRefresh={() => setAccessRefresh(prev => prev + 1)}
