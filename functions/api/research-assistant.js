@@ -74,9 +74,24 @@ export async function onRequestPost({ request, env }) {
         { status: 400 }
       );
     }
-const { data: usage, error: usageError } =
-  await supabase.rpc("consume_nexus_message");
+const secureSupabase = createClient(
+  env.VITE_SUPABASE_URL,
+  env.SUPABASE_SECRET_KEY,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  }
+);
 
+const { data: usage, error: usageError } =
+  await secureSupabase.rpc(
+    "consume_nexus_message_secure",
+    {
+      p_user_id: data.user.id
+    }
+  );
 if (usageError || !usage) {
   console.error("Nexus usage error:", usageError);
 
