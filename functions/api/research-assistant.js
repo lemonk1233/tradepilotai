@@ -150,8 +150,12 @@ Keep responses professional and concise.`
       reply: result.response || "No response generated."
     });
 
-  } catch (error) {
-    console.error("AI assistant error:", error?.name);
+   } catch (error) {
+    console.error("AI assistant error:", {
+      name: error?.name,
+      message: error?.message,
+      code: error?.code
+    });
 
     return Response.json(
       { error: "AI assistant temporarily unavailable" },
