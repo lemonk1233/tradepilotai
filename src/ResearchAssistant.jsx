@@ -571,7 +571,74 @@ export default function ResearchAssistant() {
             transform: translateY(0);
           }
         }
+.nexus-app {
+  min-height: 55vh;
+  border-radius: 18px;
+}
 
+.nexus-header {
+  padding: 12px 20px;
+}
+
+.nexus-main {
+  padding: 15px 20px 10px;
+}
+
+.nexus-welcome {
+  padding: 18px 0 22px;
+}
+
+.nexus-welcome svg {
+  width: 56px;
+  height: 56px;
+}
+
+.nexus-welcome h1 {
+  font-size: clamp(26px, 4vw, 38px);
+  margin: 10px 0 8px;
+}
+
+.nexus-welcome p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.nexus-token {
+  padding: 9px 12px;
+  margin-bottom: 10px;
+}
+
+.nexus-composer {
+  padding: 12px;
+  border-radius: 16px;
+}
+
+.nexus-composer textarea {
+  min-height: 42px;
+  font-size: 14px;
+}
+
+.nexus-send {
+  width: 34px;
+  height: 34px;
+}
+
+.nexus-suggestions {
+  margin-top: 12px;
+  gap: 6px;
+}
+
+.nexus-suggestion {
+  padding: 7px 12px;
+}
+
+.nexus-conversation {
+  height: clamp(220px, 35vh, 400px);
+}
+
+.nexus-footer {
+  padding: 12px 5px 0;
+}
         @media (prefers-reduced-motion: reduce) {
           .nexus-app * {
             animation: none !important;
