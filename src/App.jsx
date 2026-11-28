@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "./supabase";
 import Login from "./Login";
 import Admin from "./Admin";
@@ -620,7 +621,9 @@ const showLevels = showProjection && setup.stop > 0;
         {expanded ? "HIDE PRICE CHART" : "VIEW PRICE CHART"}
       </button>
 
-      {expanded && (
+      {expanded && ((content) =>
+  fullScreen ? createPortal(content, document.body) : content
+)(
       <div style={{
   background: "#080c12",
   border: "1px solid #243244",
@@ -630,7 +633,13 @@ const showLevels = showProjection && setup.stop > 0;
   position: fullScreen ? "fixed" : "relative",
   inset: fullScreen ? 0 : "auto",
   zIndex: fullScreen ? 9999 : "auto",
-  overflowY: fullScreen ? "auto" : "visible"
+  overflowY: fullScreen ? "auto" : "visible",
+width: fullScreen ? "100vw" : "auto",
+height: fullScreen ? "100vh" : "auto",
+maxWidth: "none",
+boxSizing: "border-box",
+color: "#e8eef7",
+fontFamily: "Arial, sans-serif"
 }}>
 
   <button
@@ -726,7 +735,14 @@ const showLevels = showProjection && setup.stop > 0;
           )}
 
           {points.length > 1 && (
-            <svg viewBox="0 0 500 265" width="100%">
+            <svg
+  viewBox="0 0 500 265"
+  width="100%"
+  style={{
+    display: "block",
+    height: fullScreen ? "65vh" : "auto"
+  }}
+>
 
               {Array.from({ length: 5 }, (_, i) => {
                 const value = min + (max - min) * i / 4;
