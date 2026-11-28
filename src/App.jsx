@@ -561,8 +561,8 @@ async function fetchChartWithRetry(url) {
   }
 
   const setup = calculateSetup();
-  const showProjection = indicator && !!setup;
-const showLevels = showProjection && setup.stop > 0;
+  const showProjection = indicator && !!setup && setup.fresh;
+const showLevels = showProjection && setup.validSetup;
 
   const historyEnd = showProjection ? 340 : 470;
   const candleWidth = (historyEnd - 20) /
