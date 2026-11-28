@@ -400,6 +400,7 @@ function TokenChart({ pair }) {
   const [chartError, setChartError] = useState("");
   const [period, setPeriod] = useState("minute");
   const [indicator, setIndicator] = useState(false);
+  const [fullScreen, setFullScreen] = useState(false);
   const [updated, setUpdated] = useState(null);
 
   const green = "#42e6a4";
@@ -620,6 +621,30 @@ const showLevels = showProjection && setup.stop > 0;
       </button>
 
       {expanded && (
+      <div style={{
+  background: "#080c12",
+  border: "1px solid #243244",
+  borderRadius: 12,
+  padding: fullScreen ? 24 : 12,
+  marginTop: fullScreen ? 0 : 12,
+  position: fullScreen ? "fixed" : "relative",
+  inset: fullScreen ? 0 : "auto",
+  zIndex: fullScreen ? 9999 : "auto",
+  overflowY: fullScreen ? "auto" : "visible"
+}}>
+
+  <button
+    onClick={() => setFullScreen(!fullScreen)}
+    style={{
+      ...buttonStyle,
+      width: "100%",
+      marginBottom: 12
+    }}
+  >
+    {fullScreen
+      ? "✕ CLOSE FULL SCREEN"
+      : "⛶ EXPAND CHART"}
+  </button>
         <div style={{
           background: "#080c12",
           border: "1px solid #243244",
