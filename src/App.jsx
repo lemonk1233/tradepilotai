@@ -410,7 +410,9 @@ function TokenChart({ pair }) {
 async function fetchChartWithRetry(url) {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, {
+  cache: "no-store"
+});
 
       if (response.ok) return response;
 
@@ -529,8 +531,9 @@ async function fetchChartWithRetry(url) {
 
     const latest = closed[closed.length - 1];
 
-    const fresh =
-      Date.now() / 1000 - latest.time < seconds * 3;
+    const candleAge = Date.now() / 1000 - (latest.time + seconds);
+
+const fresh = candleAge >= 0 && candleAge < seconds * 2;
 
     const validSetup =
       bullish &&
