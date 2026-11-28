@@ -392,12 +392,19 @@ function RugPullDetector({ pair }) {
     </div>
   );
 }
+
 function TokenChart({ pair }) {
   const [expanded, setExpanded] = useState(false);
   const [points, setPoints] = useState([]);
   const [busy, setBusy] = useState(false);
   const [chartError, setChartError] = useState("");
-  const [period, setPeriod] = useState("hour");
+  const [period, setPeriod] = useState("minute");
+  const [indicator, setIndicator] = useState(false);
+  const [updated, setUpdated] = useState(null);
+
+  const green = "#42e6a4";
+  const red = "#ff647c";
+  const muted = "#94a3b8";
 
   async function loadChart(timeframe) {
     setExpanded(true);
@@ -408,7 +415,7 @@ function TokenChart({ pair }) {
 
     try {
       const response = await fetch(
-        `https://api.geckoterminal.com/api/v2/networks/solana/pools/${encodeURIComponent(pair.pairAddress)}/ohlcv/${timeframe}?aggregate=${timeframe === "minute" ? 5 : 1}&limit=48&currency=usd`
+        `https://api.geckoterminal.com/api/v2/networks/solana/pools/${encodeURIComponent(pair.pairAddress)}/ohlcv/${timeframe}?aggregate=${timeframe === "minute" ? 5 : 1}&limit=48&currency=usd&token=${encodeURIComponent(pair.baseToken.address)}`
       );
 
       if (!response.ok) {
@@ -416,26 +423,30 @@ function TokenChart({ pair }) {
       }
 
       const data = await response.json();
-
-      const candles =
-        data.data?.attributes?.ohlcv_list || [];
+      const candles = data.data?.attributes?.ohlcv_list || [];
 
       const values = candles
-        .filter(c => Number.isFinite(Number(c[4])))
-        .sort((a, b) => a[0] - b[0])
         .map(c => ({
           time: Number(c[0]),
           open: Number(c[1]),
           high: Number(c[2]),
           low: Number(c[3]),
           close: Number(c[4])
-        }));
+        }))
+        .filter(c =>
+          Object.values(c).every(Number.isFinite) &&
+          c.low > 0 &&
+          c.high >= Math.max(c.open, c.close) &&
+          c.low <= Math.min(c.open, c.close)
+        )
+        .sort((a, b) => a.time - b.time);
 
       if (values.length < 2) {
         throw new Error("Not enough historical data");
       }
 
       setPoints(values);
+      setUpdated(new Date());
     } catch (err) {
       setChartError("Chart error: " + err.message);
     } finally {
@@ -443,31 +454,138 @@ function TokenChart({ pair }) {
     }
   }
 
- 
-  const min = Math.min(...points.map(c => c.low));
-  const max = Math.max(...points.map(c => c.high));
-  const range = max - min || 1;
-  
-  const candleWidth = 290 / Math.max(points.length, 1);
-  const risingCandles = points.filter(
-    c => c.close > c.open
-  ).length;
-  
-  const fallingCandles = points.filter(
-    c => c.close < c.open
-  ).length;
-  
-  const risingPercent = points.length
-    ? Math.round(risingCandles / points.length * 100)
-    : 0;
-  
-  const fallingPercent = points.length
-    ? Math.round(fallingCandles / points.length * 100)
-    : 0;
-  
-  const getY = (value) =>
-    150 - ((value - min) / range) * 130;
+  function ema(values, length) {
+    const k = 2 / (length + 1);
+    return values.reduce(
+      (previous, current) =>
+        current * k + previous * (1 - k),
+      values[0]
+    );
+  }
 
+  function calculateSetup() {
+    const seconds = period === "minute"
+      ? 300
+      : period === "hour" ? 3600 : 86400;
+
+    const closed = points.filter(
+      c => c.time + seconds <= Date.now() / 1000
+    );
+
+    if (closed.length < 25) return null;
+
+    const closes = closed.map(c => c.close);
+    const current = closes[closes.length - 1];
+
+    const fast = ema(closes, 9);
+    const slow = ema(closes, 21);
+
+    const ranges = closed.slice(1).map((c, i) =>
+      Math.max(
+        c.high - c.low,
+        Math.abs(c.high - closed[i].close),
+        Math.abs(c.low - closed[i].close)
+      )
+    ).slice(-14);
+
+    const atr = ranges.reduce((a, b) => a + b, 0)
+      / ranges.length;
+
+    if (!Number.isFinite(atr) || atr <= 0) return null;
+
+    const bullish = fast > slow && current > fast;
+    const bearish = fast < slow && current < fast;
+
+    const direction = bullish
+      ? "BULLISH"
+      : bearish ? "BEARISH" : "NEUTRAL";
+
+    const entryLow = current - atr * 0.5;
+    const entryHigh = current - atr * 0.2;
+    const target = current + atr * 1.5;
+    const stop = current - atr * 1.2;
+
+    const latest = closed[closed.length - 1];
+
+    const fresh =
+      Date.now() / 1000 - latest.time < seconds * 3;
+
+    const validSetup =
+      bullish &&
+      fresh &&
+      stop > 0 &&
+      Number(pair.liquidity?.usd || 0) >= 10000;
+
+    return {
+      direction,
+      current,
+      atr,
+      fast,
+      slow,
+      entryLow,
+      entryHigh,
+      target,
+      stop,
+      validSetup,
+      fresh,
+      time: latest.time + seconds,
+      horizon: seconds * 6,
+      scenario: bullish
+        ? target
+        : bearish
+          ? Math.max(current - atr * 1.5, 0)
+          : current
+    };
+  }
+
+  const setup = calculateSetup();
+  const showProjection = indicator && setup && setup.fresh;
+  const showLevels = showProjection && setup.validSetup;
+
+  const historyEnd = showProjection ? 340 : 470;
+  const candleWidth = (historyEnd - 20) /
+    Math.max(points.length, 1);
+
+  const chartValues = points.flatMap(
+    c => [c.high, c.low]
+  );
+
+  if (showProjection) {
+    chartValues.push(setup.scenario);
+  }
+
+  if (showLevels) {
+    chartValues.push(
+      setup.target,
+      setup.stop,
+      setup.entryLow,
+      setup.entryHigh
+    );
+  }
+
+  const rawMin = points.length
+    ? Math.min(...chartValues) : 0;
+
+  const rawMax = points.length
+    ? Math.max(...chartValues) : 1;
+
+  const padding = (rawMax - rawMin || rawMax * 0.01 || 1)
+    * 0.12;
+
+  const min = rawMin - padding;
+  const max = rawMax + padding;
+
+  const getY = value =>
+    230 - ((value - min) / (max - min || 1)) * 205;
+
+  const formatPrice = value =>
+    "$" + Number(value).toPrecision(5);
+
+  const outlookColor = setup?.direction === "BULLISH"
+    ? green
+    : setup?.direction === "BEARISH"
+      ? red
+      : muted;
 
   return (
     <div style={{ marginBottom: 20 }}>
@@ -486,13 +604,29 @@ function TokenChart({ pair }) {
           background: "#080c12",
           border: "1px solid #243244",
           borderRadius: 12,
-          padding: 15,
+          padding: 12,
           marginTop: 12
         }}>
+
+          <button
+            onClick={() => setIndicator(!indicator)}
+            aria-pressed={indicator}
+            style={{
+              ...buttonStyle,
+              width: "100%",
+              marginBottom: 12,
+              background: indicator ? "#174d3b" : "#101822",
+              boxShadow: indicator
+                ? "0 0 15px #42e6a422" : "none"
+            }}
+          >
+            ✦ NEXUS AI INDICATOR {indicator ? "ON" : "OFF"}
+          </button>
+
           <div style={{
             display: "flex",
-            gap: 8,
-            marginBottom: 15
+            gap: 6,
+            marginBottom: 12
           }}>
             {[
               ["minute", "4H"],
@@ -508,8 +642,7 @@ function TokenChart({ pair }) {
                   flex: 1,
                   padding: 8,
                   background: period === value
-                    ? "#174d3b"
-                    : "#101822"
+                    ? "#174d3b" : "#101822"
                 }}
               >
                 {label}
@@ -517,84 +650,353 @@ function TokenChart({ pair }) {
             ))}
           </div>
 
-          {busy && <p>Loading historical prices...</p>}
+          {busy && <p>Loading market data...</p>}
 
           {chartError && (
-            <p style={{ color: "#ff647c" }}>
-              {chartError}
-            </p>
+            <p style={{ color: red }}>{chartError}</p>
+          )}
+
+          {indicator && setup && (
+            <div style={{
+              border: "1px solid #243244",
+              borderRadius: 10,
+              padding: 12,
+              marginBottom: 12
+            }}>
+              <div style={{
+                color: green,
+                fontSize: 10,
+                letterSpacing: 2
+              }}>
+                NEXUS INTELLIGENCE • BETA
+              </div>
+
+              <h2 style={{
+                color: outlookColor,
+                margin: "8px 0"
+              }}>
+                {setup.direction === "BULLISH" ? "↗ " :
+                 setup.direction === "BEARISH" ? "↘ " : "→ "}
+                {setup.direction}
+              </h2>
+
+              <small style={{ color: muted }}>
+                Historical EMA momentum analysis
+              </small>
+            </div>
           )}
 
           {points.length > 1 && (
-            <svg viewBox="0 0 320 175" width="100%">
-              {[20, 65, 110, 155].map(y => (
-                <line
-                  key={y}
-                  x1="10"
-                  y1={y}
-                  x2="310"
-                  y2={y}
-                  stroke="#243244"
-                  strokeDasharray="4 4"
+            <svg viewBox="0 0 500 265" width="100%">
+
+              {Array.from({ length: 5 }, (_, i) => {
+                const value = min + (max - min) * i / 4;
+                return (
+                  <g key={i}>
+                    <line
+                      x1="10"
+                      x2="490"
+                      y1={getY(value)}
+                      y2={getY(value)}
+                      stroke="#243244"
+                      strokeDasharray="4 4"
+                    />
+                  </g>
+                );
+              })}
+
+              {showProjection && (
+                <rect
+                  x="350"
+                  y="15"
+                  width="140"
+                  height="220"
+                  fill="#42e6a4"
+                  opacity="0.025"
                 />
-              ))}
-             
-{points.map((c, i) => {
-  const x = 15 + i * candleWidth;
-  const color = c.close >= c.open
-    ? "#42e6a4"
-    : "#ff647c";
+              )}
 
-  return (
-    <g key={c.time}>
-      <line
-        x1={x}
-        x2={x}
-        y1={getY(c.high)}
-        y2={getY(c.low)}
-        stroke={color}
-        strokeWidth="1.2"
-      />
-      <rect
-        x={x - candleWidth * 0.35}
-        y={Math.min(getY(c.open), getY(c.close))}
-        width={candleWidth * 0.7}
-        height={Math.max(
-          Math.abs(getY(c.open) - getY(c.close)),
-          1
-        )}
-        fill={color}
-        rx="0.5"
-      />
-    </g>
-  );
-})}
+              {showLevels && (
+                <g>
+                  <rect
+                    x="350"
+                    y={getY(setup.entryHigh)}
+                    width="140"
+                    height={Math.max(
+                      getY(setup.entryLow) -
+                      getY(setup.entryHigh), 1
+                    )}
+                    fill={green}
+                    opacity="0.2"
+                  />
 
-<text x="15" y="170" fill="#42e6a4" fontSize="10">
-  Rising candles: {risingPercent}%
-</text>
+                  {[
+                    [setup.target, "SELL TARGET", red],
+                    [setup.entryHigh, "BUY ZONE", green],
+                    [setup.stop, "STOP LOSS", "#fbbf24"]
+                  ].map(([value, label, color]) => (
+                    <g key={label}>
+                      <line
+                        x1="350"
+                        x2="490"
+                        y1={getY(value)}
+                        y2={getY(value)}
+                        stroke={color}
+                        strokeDasharray="4 3"
+                      />
+                      <text
+                        x="488"
+                        y={getY(value) - 5}
+                        fill={color}
+                        fontSize="9"
+                        textAnchor="end"
+                      >
+                        {label}
+                      </text>
+                    </g>
+                  ))}
+                </g>
+              )}
 
-<text x="305" y="170" fill="#ff647c"
-  fontSize="10" textAnchor="end">
-  Falling candles: {fallingPercent}%
-</text>
+              {points.map((c, i) => {
+                const x = 20 + i * candleWidth;
+                const color = c.close >= c.open
+                  ? green : red;
+
+                return (
+                  <g key={c.time}>
+                    <line
+                      x1={x}
+                      x2={x}
+                      y1={getY(c.high)}
+                      y2={getY(c.low)}
+                      stroke={color}
+                      strokeWidth="1.2"
+                    />
+                    <rect
+                      x={x - candleWidth * 0.35}
+                      y={Math.min(
+                        getY(c.open), getY(c.close)
+                      )}
+                      width={candleWidth * 0.7}
+                      height={Math.max(
+                        Math.abs(
+                          getY(c.open) - getY(c.close)
+                        ), 1
+                      )}
+                      fill={color}
+                      rx="0.5"
+                    />
+                  </g>
+                );
+              })}
+
+              {showProjection && (
+                <g>
+                  <line
+                    x1="350"
+                    x2="350"
+                    y1="10"
+                    y2="240"
+                    stroke={muted}
+                    strokeDasharray="3 4"
+                  />
+
+                  <text
+                    x="350"
+                    y="10"
+                    fill={muted}
+                    fontSize="9"
+                    textAnchor="middle"
+                  >
+                    SCENARIO
+                  </text>
+
+                  <path
+                    d={`M 350 ${getY(setup.current)}
+                        L 490 ${getY(setup.scenario)}`}
+                    fill="none"
+                    stroke={outlookColor}
+                    strokeWidth="2"
+                    strokeDasharray="6 5"
+                  />
+
+                  <circle
+                    cx="490"
+                    cy={getY(setup.scenario)}
+                    r="3"
+                    fill={outlookColor}
+                  />
+
+                  <text
+                    x="420"
+                    y="255"
+                    fill={muted}
+                    fontSize="9"
+                    textAnchor="middle"
+                  >
+                    Hypothetical path
+                  </text>
+                </g>
+              )}
+
+              <text
+                x="15"
+                y="255"
+                fill={muted}
+                fontSize="10"
+              >
+                Historical candles
+              </text>
 
             </svg>
           )}
 
+          {indicator && !busy && !setup && !chartError && (
+            <p style={{ color: muted, fontSize: 12 }}>
+              Insufficient completed candles for analysis.
+            </p>
+          )}
+
+          {indicator && setup && !setup.fresh && (
+            <p style={{ color: "#fbbf24", fontSize: 12 }}>
+              Market data is stale. Refresh before analysis.
+            </p>
+          )}
+
+          {showLevels && (
+            <div style={{
+              display: "grid",
+              gap: 8,
+              marginTop: 10
+            }}>
+              {[
+                [
+                  "HYPOTHETICAL BUY ZONE",
+                  `${formatPrice(setup.entryLow)} – ${formatPrice(setup.entryHigh)}`,
+                  green
+                ],
+                [
+                  "HYPOTHETICAL SELL TARGET",
+                  formatPrice(setup.target),
+                  red
+                ],
+                [
+                  "STOP-LOSS REFERENCE",
+                  formatPrice(setup.stop),
+                  "#fbbf24"
+                ]
+              ].map(([label, value, color]) => (
+                <div key={label} style={{
+                  background: "#101822",
+                  border: `1px solid ${color}44`,
+                  borderRadius: 8,
+                  padding: 10
+                }}>
+                  <div style={{
+                    color,
+                    fontSize: 10,
+                    letterSpacing: 1
+                  }}>
+                    {label}
+                  </div>
+                  <strong style={{
+                    color,
+                    fontSize: 15,
+                    overflowWrap: "anywhere"
+                  }}>
+                    {value}
+                  </strong>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {indicator && setup && !setup.validSetup && (
+            <p style={{
+              color: "#fbbf24",
+              fontSize: 12
+            }}>
+              No qualifying bullish simulation setup.
+            </p>
+          )}
+
+          {indicator && setup && (
+            <div style={{
+              background: "#101822",
+              borderRadius: 8,
+              padding: 12,
+              marginTop: 12
+            }}>
+              <strong style={{
+                color: green,
+                fontSize: 11
+              }}>
+                ✦ NEXUS ANALYSIS
+              </strong>
+
+              <p style={{
+                color: muted,
+                fontSize: 12,
+                lineHeight: 1.6
+              }}>
+                {setup.direction === "BULLISH"
+                  ? "The 9-period EMA is above the 21-period EMA, and the latest completed close is above the faster EMA."
+                  : setup.direction === "BEARISH"
+                    ? "The faster EMA is below the slower EMA, with price showing negative historical momentum."
+                    : "The moving averages do not confirm a clear directional trend."}
+                {" "}Scenario levels use recent average true range.
+                They are illustrative, not validated forecasts.
+              </p>
+
+              <p style={{
+                color: muted,
+                fontSize: 11
+              }}>
+                Scenario horizon: {
+                  period === "minute" ? "30 minutes" :
+                  period === "hour" ? "6 hours" : "6 days"
+                }
+              </p>
+
+              <p style={{
+                color: muted,
+                fontSize: 10
+              }}>
+                Based on completed candles through {
+                  new Date(setup.time * 1000).toLocaleString()
+                }.
+              </p>
+            </div>
+          )}
+
+          <button
+            disabled={busy}
+            onClick={() => loadChart(period)}
+            style={{
+              ...buttonStyle,
+              width: "100%",
+              marginTop: 12,
+              fontSize: 11
+            }}
+          >
+            ↻ REFRESH MARKET DATA
+          </button>
+
           <p style={{
-            color: "#94a3b8",
-            fontSize: 10
+            color: muted,
+            fontSize: 10,
+            lineHeight: 1.5
           }}>
-            Historical closing prices in USD.
             Source: GeckoTerminal.
+            {updated && ` Retrieved: ${updated.toLocaleTimeString()}.`}
+            {indicator && " Experimental rule-based indicator for research and simulated trading only. Not a trained AI forecast. Accuracy has not been validated."}
           </p>
         </div>
       )}
     </div>
   );
 }
-
 
 function Dashboard({ userId }) {
   const [activePage, setActivePage] = useState("scanner");
