@@ -645,13 +645,7 @@ const showLevels = showProjection && setup.stop > 0;
       ? "✕ CLOSE FULL SCREEN"
       : "⛶ EXPAND CHART"}
   </button>
-        <div style={{
-          background: "#080c12",
-          border: "1px solid #243244",
-          borderRadius: 12,
-          padding: 12,
-          marginTop: 12
-        }}>
+        
 
           <button
             onClick={() => setIndicator(!indicator)}
