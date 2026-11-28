@@ -733,7 +733,28 @@ fontFamily: "Arial, sans-serif"
               </small>
             </div>
           )}
+{indicator && setup && !showLevels && (
+  <div style={{
+    background: "#101822",
+    border: "1px solid #fbbf24",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 12,
+    color: "#fbbf24"
+  }}>
+    <strong>NO QUALIFYING TRADE SETUP</strong>
 
+    <p style={{ fontSize: 13, marginBottom: 0 }}>
+      {!setup.fresh
+        ? "Market data is stale. Refresh market data."
+        : setup.direction === "BEARISH"
+        ? "Downward momentum detected. No bullish setup."
+        : setup.direction === "NEUTRAL"
+        ? "No clear market direction detected."
+        : "Market conditions do not meet the indicator requirements."}
+    </p>
+  </div>
+)}
           {points.length > 1 && (
             <svg
   viewBox="0 0 660 265"
