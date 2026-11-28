@@ -764,6 +764,23 @@ const showLevels = showProjection && setup.stop > 0;
               {showLevels && (
                 <g>
                   <rect
+  x="350"
+  y={getY(setup.target)}
+  width="140"
+  height={getY(setup.entryHigh) - getY(setup.target)}
+  fill="#42e6a4"
+  opacity="0.16"
+/>
+
+<rect
+  x="350"
+  y={getY(setup.entryHigh)}
+  width="140"
+  height={getY(setup.stop) - getY(setup.entryHigh)}
+  fill="#ff647c"
+  opacity="0.16"
+/>
+                  <rect
                     x="350"
                     y={getY(setup.entryHigh)}
                     width="140"
@@ -776,9 +793,9 @@ const showLevels = showProjection && setup.stop > 0;
                   />
 
                   {[
-                    [setup.target, "SELL TARGET", red],
-                    [setup.entryHigh, "BUY ZONE", green],
-                    [setup.stop, "STOP LOSS", "#fbbf24"]
+                    [setup.target, "SELL TARGET " + formatPrice(setup.target), red],
+[setup.entryHigh, "BUY ZONE " + formatPrice(setup.entryHigh), green],
+[setup.stop, "STOP LOSS " + formatPrice(setup.stop), "#fbbf24"]
                   ].map(([value, label, color]) => (
                     <g key={label}>
                       <line
@@ -793,8 +810,9 @@ const showLevels = showProjection && setup.stop > 0;
                         x="488"
                         y={getY(value) - 5}
                         fill={color}
-                        fontSize="9"
-                        textAnchor="end"
+                        fontSize="12"
+fontWeight="bold"
+textAnchor="end"
                       >
                         {label}
                       </text>
