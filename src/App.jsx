@@ -736,7 +736,7 @@ fontFamily: "Arial, sans-serif"
 
           {points.length > 1 && (
             <svg
-  viewBox="0 0 500 265"
+  viewBox="0 0 660 265"
   width="100%"
   style={{
     display: "block",
@@ -793,7 +793,7 @@ fontFamily: "Arial, sans-serif"
 
 <text
   x="420"
-  y={(getY(setup.target) + getY(setup.entryHigh)) / 2}
+  y="248"
   fill="#42e6a4"
   fontSize="15"
   fontWeight="bold"
@@ -804,7 +804,7 @@ fontFamily: "Arial, sans-serif"
 
 <text
   x="420"
-  y={(getY(setup.stop) + getY(setup.entryHigh)) / 2}
+  y="261"
   fill="#ff647c"
   fontSize="12"
   fontWeight="bold"
@@ -842,31 +842,60 @@ fontFamily: "Arial, sans-serif"
                   />
 
                   {[
-                    [setup.target, "SELL TARGET " + formatPrice(setup.target), red],
-[setup.entryHigh, "BUY ZONE " + formatPrice(setup.entryHigh), green],
-[setup.stop, "STOP LOSS " + formatPrice(setup.stop), "#fbbf24"]
-                  ].map(([value, label, color]) => (
-                    <g key={label}>
-                      <line
-                        x1="350"
-                        x2="490"
-                        y1={getY(value)}
-                        y2={getY(value)}
-                        stroke={color}
-                        strokeDasharray="4 3"
-                      />
-                      <text
-                        x="488"
-                        y={getY(value) - 5}
-                        fill={color}
-                        fontSize="12"
-fontWeight="bold"
-textAnchor="end"
-                      >
-                        {label}
-                      </text>
-                    </g>
-                  ))}
+                    [setup.target, "SIMULATED SELL", red, 45],
+[setup.entryHigh, "SIMULATED BUY", green, 125],
+[setup.stop, "STOP LOSS", "#fbbf24", 205]
+].map(([value, label, color, labelY]) => (
+  <g key={label}>
+    <line
+      x1="350"
+      x2="490"
+      y1={getY(value)}
+      y2={getY(value)}
+      stroke={color}
+      strokeDasharray="4 3"
+    />
+
+    <path
+      d={`M 490 ${getY(value)} L 505 ${labelY} H 515`}
+      stroke={color}
+      strokeWidth="1.2"
+      fill="none"
+    />
+
+    <rect
+      x="515"
+      y={labelY - 20}
+      width="140"
+      height="40"
+      rx="6"
+      fill="#101822"
+      stroke={color}
+    />
+
+    <text
+      x="585"
+      y={labelY - 4}
+      fill={color}
+      fontSize="11"
+      fontWeight="bold"
+      textAnchor="middle"
+    >
+      {label}
+    </text>
+
+    <text
+      x="585"
+      y={labelY + 12}
+      fill={color}
+      fontSize="12"
+      fontWeight="bold"
+      textAnchor="middle"
+    >
+      {formatPrice(value)}
+    </text>
+  </g>
+))}
                 </g>
               )}
 
