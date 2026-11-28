@@ -405,7 +405,27 @@ function TokenChart({ pair }) {
   const green = "#42e6a4";
   const red = "#ff647c";
   const muted = "#94a3b8";
+async function fetchChartWithRetry(url) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(url);
 
+      if (response.ok) return response;
+
+      if (response.status !== 429 && response.status < 500) {
+        return response;
+      }
+
+      throw new Error("Market data temporarily unavailable");
+    } catch (error) {
+      if (attempt === 2) throw error;
+
+      await new Promise(resolve =>
+        setTimeout(resolve, 3000 * (attempt + 1))
+      );
+    }
+  }
+}
   async function loadChart(timeframe) {
     setExpanded(true);
     setPeriod(timeframe);
@@ -414,7 +434,7 @@ function TokenChart({ pair }) {
     setPoints([]);
 
     try {
-      const response = await fetch(
+      const response = await fetchChartWithRetry(
         `https://api.geckoterminal.com/api/v2/networks/solana/pools/${encodeURIComponent(pair.pairAddress)}/ohlcv/${timeframe}?aggregate=${timeframe === "minute" ? 5 : 1}&limit=48&currency=usd&token=${encodeURIComponent(pair.baseToken.address)}`
       );
 
