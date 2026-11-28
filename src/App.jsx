@@ -763,6 +763,45 @@ const showLevels = showProjection && setup.stop > 0;
 
               {showLevels && (
                 <g>
+                  <circle
+  cx="365"
+  cy={getY(setup.entryHigh)}
+  r="5"
+  fill="#42e6a4"
+  stroke="white"
+  strokeWidth="1.5"
+/>
+
+<circle
+  cx="480"
+  cy={getY(setup.target)}
+  r="5"
+  fill="#ff647c"
+  stroke="white"
+  strokeWidth="1.5"
+/>
+
+<text
+  x="420"
+  y={(getY(setup.target) + getY(setup.entryHigh)) / 2}
+  fill="#42e6a4"
+  fontSize="15"
+  fontWeight="bold"
+  textAnchor="middle"
+>
+  +{((setup.target / setup.entryHigh - 1) * 100).toFixed(2)}%
+</text>
+
+<text
+  x="420"
+  y={(getY(setup.stop) + getY(setup.entryHigh)) / 2}
+  fill="#ff647c"
+  fontSize="12"
+  fontWeight="bold"
+  textAnchor="middle"
+>
+  {((setup.stop / setup.entryHigh - 1) * 100).toFixed(2)}%
+</text>
                   <rect
   x="350"
   y={getY(setup.target)}
