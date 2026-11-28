@@ -654,6 +654,37 @@ fontFamily: "Arial, sans-serif"
       ? "✕ CLOSE FULL SCREEN"
       : "⛶ EXPAND CHART"}
   </button>
+        {fullScreen && (
+  <div style={{ marginBottom: 16 }}>
+    <div style={{
+      color: "#94a3b8",
+      fontSize: 13,
+      letterSpacing: 2
+    }}>
+      NEXUS MARKET INTELLIGENCE
+    </div>
+
+    <h1 style={{
+      fontSize: 30,
+      margin: "8px 0"
+    }}>
+      {pair.baseToken.name} ({pair.baseToken.symbol})
+      / {pair.quoteToken.symbol}
+    </h1>
+
+    <div style={{
+      color: "#42e6a4",
+      fontSize: 26,
+      fontWeight: "bold"
+    }}>
+      {formatPrice(pair.priceUsd)}
+    </div>
+
+    <div style={{ color: "#94a3b8", fontSize: 12 }}>
+      Last scanner price
+    </div>
+  </div>
+)}
         
 
           <button
@@ -919,7 +950,34 @@ fontFamily: "Arial, sans-serif"
 ))}
                 </g>
               )}
+{fullScreen && Array.from({ length: 5 }, (_, i) => {
+  const axisPrice = max - ((max - min) * i) / 4;
+  const y = getY(axisPrice);
 
+  return (
+    <g key={`axis-${i}`}>
+      <line
+        x1="10"
+        x2="490"
+        y1={y}
+        y2={y}
+        stroke="#243244"
+        strokeDasharray="3 5"
+        opacity="0.5"
+      />
+
+      <text
+        x="12"
+        y={y - 5}
+        fill="#94a3b8"
+        fontSize="9"
+        fontWeight="bold"
+      >
+        {formatPrice(axisPrice)}
+      </text>
+    </g>
+  );
+})}
               {points.map((c, i) => {
                 const x = 20 + i * candleWidth;
                 const color = c.close >= c.open
