@@ -539,8 +539,8 @@ function TokenChart({ pair }) {
   }
 
   const setup = calculateSetup();
-  const showProjection = indicator && setup && setup.fresh;
-  const showLevels = showProjection && setup.validSetup;
+  const showProjection = indicator && !!setup;
+const showLevels = showProjection && setup.stop > 0;
 
   const historyEnd = showProjection ? 340 : 470;
   const candleWidth = (historyEnd - 20) /
@@ -917,7 +917,7 @@ function TokenChart({ pair }) {
               color: "#fbbf24",
               fontSize: 12
             }}>
-              No qualifying bullish simulation setup.
+              Illustrative levels only — no qualifying bullish setup.
             </p>
           )}
 
